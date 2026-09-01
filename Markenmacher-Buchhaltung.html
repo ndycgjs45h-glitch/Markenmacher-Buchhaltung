@@ -1,0 +1,1882 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Markenmacher Buchhaltung</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Markenmacher">
+<meta name="theme-color" content="#141414">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23141414'/%3E%3Ctext x='50' y='66' font-size='54' font-family='Georgia,serif' fill='%232451F5' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E">
+<style>
+/* ============ DESIGN TOKENS ============ */
+:root{
+  --ink:#141414;
+  --ink-soft:#2A2A28;
+  --paper:#F5F4F0;
+  --paper-raised:#FFFFFF;
+  --line:#E4E1D8;
+  --accent:#2451F5;
+  --accent-soft:#E8ECFF;
+  --good:#1F9D6F;
+  --good-soft:#E4F5EC;
+  --warn:#B7791F;
+  --warn-soft:#FBF0DC;
+  --bad:#C6423D;
+  --bad-soft:#FBE7E6;
+  --muted:#8A8678;
+  --text:#1B1A17;
+  --text-soft:#6B6858;
+  --radius-s:8px;
+  --radius-m:14px;
+  --radius-l:22px;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, "Iowan Old Style", serif;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+[data-theme="dark"]{
+  --ink:#F5F4F0;
+  --paper:#141412;
+  --paper-raised:#1E1D1A;
+  --line:#33322C;
+  --accent:#5B7FFF;
+  --accent-soft:#1D2547;
+  --good:#3FC28C;
+  --good-soft:#12312A;
+  --warn:#E0A83F;
+  --warn-soft:#3A2C10;
+  --bad:#E2726D;
+  --bad-soft:#3A1B1A;
+  --muted:#8B8878;
+  --text:#F1EFE9;
+  --text-soft:#B4B0A2;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--paper); color:var(--text);
+  font-family:var(--font-ui); font-size:15px; line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:none;
+}
+h1,h2,h3{ font-family:var(--font-display); font-weight:600; margin:0; letter-spacing:-0.01em;}
+button{font-family:inherit; cursor:pointer;}
+input,select,textarea{font-family:inherit; font-size:16px;}
+a{color:inherit;}
+.hidden{display:none !important;}
+
+/* ============ APP SHELL ============ */
+#app{ min-height:100%; display:flex; flex-direction:column; }
+.shell{ display:flex; flex:1; min-height:0; }
+
+/* Sidebar (tablet/desktop) */
+.sidebar{
+  display:none;
+  width:230px; flex-shrink:0; border-right:1px solid var(--line);
+  padding:24px 14px; background:var(--paper);
+}
+.sidebar .brand{ padding:6px 10px 26px; }
+.sidebar .brand .name{ font-family:var(--font-display); font-size:19px; font-weight:600;}
+.sidebar .brand .sub{ font-size:12px; color:var(--text-soft); margin-top:2px;}
+.sidebar nav{ display:flex; flex-direction:column; gap:2px;}
+.sidebar .navitem{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-s);
+  color:var(--text-soft); border:none; background:none; text-align:left; font-size:14.5px; font-weight:500;
+}
+.sidebar .navitem.active{ background:var(--accent-soft); color:var(--accent); }
+.sidebar .navitem svg{ width:18px; height:18px; flex-shrink:0; }
+
+main{ flex:1; min-width:0; overflow-y:auto; padding-bottom:96px; }
+.page{ max-width:900px; margin:0 auto; padding:20px 16px 40px; }
+
+/* Top bar (mobile) */
+.topbar{
+  position:sticky; top:0; z-index:20; background:color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  padding: calc(var(--safe-top) + 12px) 16px 12px; border-bottom:1px solid var(--line);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.topbar h1{ font-size:21px; }
+.topbar .icon-btn{ width:36px; height:36px; border-radius:50%; border:1px solid var(--line); background:var(--paper-raised); display:flex; align-items:center; justify-content:center;}
+
+/* Bottom tab bar (mobile) */
+.tabbar{
+  position:fixed; left:0; right:0; bottom:0; z-index:30;
+  display:flex; background:color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  border-top:1px solid var(--line);
+  padding: 6px 4px calc(var(--safe-bottom) + 6px);
+}
+.tabbar .tabitem{
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+  background:none; border:none; color:var(--muted); padding:6px 2px; border-radius:10px;
+  font-size:10.5px; font-weight:600;
+}
+.tabbar .tabitem.active{ color:var(--accent); }
+.tabbar svg{ width:23px; height:23px; }
+
+/* ============ COMPONENTS ============ */
+.card{
+  background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius-m);
+  padding:18px;
+}
+.card + .card{ margin-top:12px; }
+.grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.grid-2{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.stat{
+  background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius-m);
+  padding:14px 16px;
+}
+.stat .label{ font-size:12px; color:var(--text-soft); font-weight:600; }
+.stat .value{ font-family:var(--font-display); font-size:22px; margin-top:4px; font-variant-numeric:tabular-nums;}
+.hero{
+  background:var(--ink); color:var(--paper); border-radius:var(--radius-l);
+  padding:26px 22px; margin-bottom:14px;
+}
+[data-theme="dark"] .hero{ background:var(--paper-raised); border:1px solid var(--line); }
+.hero .label{ font-size:12.5px; opacity:.65; font-weight:600; text-transform:none;}
+.hero .amount{ font-family:var(--font-display); font-size:44px; font-weight:600; margin-top:6px; font-variant-numeric:tabular-nums; letter-spacing:-0.01em;}
+.hero .sub-row{ display:flex; gap:22px; margin-top:18px; padding-top:16px; border-top:1px solid rgba(255,255,255,.14);}
+[data-theme="dark"] .hero .sub-row{ border-top-color:var(--line); }
+.hero .sub-row .item .l{ font-size:11.5px; opacity:.6; }
+.hero .sub-row .item .v{ font-family:var(--font-display); font-size:17px; margin-top:2px; font-variant-numeric:tabular-nums;}
+
+.section-title{ font-size:13px; font-weight:700; color:var(--text-soft); margin: 22px 2px 10px; text-transform:none;}
+.section-title:first-child{ margin-top:0; }
+
+.period-select{
+  display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px; -ms-overflow-style:none; scrollbar-width:none;
+}
+.period-select::-webkit-scrollbar{display:none;}
+.period-chip{
+  flex-shrink:0; padding:7px 13px; border-radius:100px; border:1px solid var(--line); background:var(--paper-raised);
+  font-size:13px; font-weight:600; color:var(--text-soft); white-space:nowrap;
+}
+.period-chip.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+[data-theme="dark"] .period-chip.active{ background:var(--accent); border-color:var(--accent); color:#fff;}
+
+.chart-wrap{ overflow-x:auto; }
+.list-row{
+  display:flex; align-items:center; gap:12px; padding:13px 4px; border-bottom:1px solid var(--line);
+}
+.list-row:last-child{ border-bottom:none; }
+.list-row .avatar{
+  width:38px; height:38px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:700; font-family:var(--font-display);
+}
+.list-row .avatar.in{ background:var(--good-soft); color:var(--good); }
+.list-row .avatar.out{ background:var(--bad-soft); color:var(--bad); }
+.list-row .main{ flex:1; min-width:0; }
+.list-row .title{ font-weight:600; font-size:14.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.list-row .meta{ font-size:12.5px; color:var(--text-soft); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.list-row .amt{ font-weight:700; font-variant-numeric:tabular-nums; font-size:14.5px; flex-shrink:0; }
+.list-row .amt.in{ color:var(--good); }
+.list-row .amt.out{ color:var(--bad); }
+.badge{ display:inline-block; padding:2px 8px; border-radius:100px; font-size:11px; font-weight:700; margin-top:3px;}
+.badge.open{ background:var(--warn-soft); color:var(--warn); }
+.badge.paid{ background:var(--good-soft); color:var(--good); }
+
+.empty{ text-align:center; padding:44px 20px; color:var(--text-soft); }
+.empty svg{ width:40px; height:40px; margin-bottom:10px; opacity:.4; }
+.empty .t{ font-weight:600; color:var(--text); margin-bottom:4px;}
+
+.fab{
+  position:fixed; right:18px; z-index:25; bottom: calc(var(--safe-bottom) + 78px);
+  width:56px; height:56px; border-radius:50%; background:var(--accent); color:#fff; border:none;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px rgba(36,81,245,.35);
+}
+.fab svg{ width:26px; height:26px; }
+
+.searchbar{
+  display:flex; align-items:center; gap:8px; background:var(--paper-raised); border:1px solid var(--line);
+  border-radius:12px; padding:9px 12px; margin-bottom:12px;
+}
+.searchbar svg{ width:17px; height:17px; color:var(--muted); flex-shrink:0;}
+.searchbar input{ border:none; background:none; outline:none; flex:1; color:var(--text); font-size:15px;}
+.filter-row{ display:flex; gap:8px; overflow-x:auto; margin-bottom:14px; }
+.filter-chip{ flex-shrink:0; padding:6px 12px; border-radius:100px; border:1px solid var(--line); background:var(--paper-raised); font-size:12.5px; font-weight:600; color:var(--text-soft); }
+.filter-chip.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+/* Buttons */
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; border-radius:11px; padding:12px 18px; font-weight:700; font-size:14.5px; border:none; }
+.btn-primary{ background:var(--accent); color:#fff; }
+.btn-secondary{ background:var(--paper-raised); color:var(--text); border:1px solid var(--line); }
+.btn-danger{ background:var(--bad-soft); color:var(--bad); }
+.btn-block{ width:100%; }
+.btn-ghost{ background:none; color:var(--accent); font-weight:600; border:none; padding:10px 4px;}
+
+/* Forms */
+.field{ margin-bottom:14px; }
+.field label{ display:block; font-size:12.5px; font-weight:700; color:var(--text-soft); margin-bottom:6px; }
+.field input[type=text], .field input[type=number], .field input[type=date], .field select, .field textarea{
+  width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--line); background:var(--paper-raised);
+  color:var(--text); outline:none;
+}
+.field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--accent); }
+.field textarea{ resize:vertical; min-height:60px; }
+.field-error{ color:var(--bad); font-size:12px; margin-top:5px; font-weight:600;}
+.field.has-error input, .field.has-error select{ border-color:var(--bad); }
+.field-hint{ font-size:12px; color:var(--muted); margin-top:5px; }
+.seg{ display:flex; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+.seg button{ flex:1; padding:10px 8px; background:var(--paper-raised); border:none; color:var(--text-soft); font-weight:600; font-size:13.5px; }
+.seg button.active{ background:var(--accent); color:#fff; }
+.seg button + button{ border-left:1px solid var(--line); }
+.toggle-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 0; }
+.toggle-row .t{ font-weight:600; font-size:14.5px;}
+.toggle-row .d{ font-size:12.5px; color:var(--text-soft); margin-top:2px; max-width:260px;}
+.switch{ width:48px; height:28px; border-radius:100px; background:var(--line); position:relative; border:none; flex-shrink:0; }
+.switch.on{ background:var(--accent); }
+.switch::after{ content:""; position:absolute; width:24px; height:24px; border-radius:50%; background:#fff; top:2px; left:2px; transition:left .15s ease; box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.switch.on::after{ left:22px; }
+
+.mix-calc{ background:var(--accent-soft); border-radius:10px; padding:12px 14px; margin-top:6px; font-size:13.5px;}
+.mix-calc .row{ display:flex; justify-content:space-between; padding:3px 0; }
+.mix-calc .row.total{ font-weight:700; border-top:1px solid rgba(0,0,0,.08); margin-top:4px; padding-top:7px;}
+
+.receipt-box{ border:1.5px dashed var(--line); border-radius:12px; padding:16px; text-align:center; }
+.receipt-box.has-file{ border-style:solid; }
+.receipt-preview{ display:flex; align-items:center; gap:10px; text-align:left; }
+.receipt-preview img{ width:46px; height:46px; object-fit:cover; border-radius:8px; }
+.receipt-preview .icon{ width:46px; height:46px; border-radius:8px; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; color:var(--accent);}
+.chip-row{ display:flex; gap:8px; justify-content:center; margin-top:10px; flex-wrap:wrap;}
+
+/* Modal / sheet */
+.sheet-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:50; display:flex; align-items:flex-end; justify-content:center;
+}
+.sheet{
+  background:var(--paper); width:100%; max-width:560px; max-height:92vh; overflow-y:auto;
+  border-radius:20px 20px 0 0; padding: 10px 18px calc(var(--safe-bottom) + 24px);
+}
+@media(min-width:720px){
+  .sheet-backdrop{ align-items:center; }
+  .sheet{ border-radius:20px; max-height:88vh; }
+}
+.sheet-handle{ width:36px; height:4px; background:var(--line); border-radius:100px; margin:8px auto 14px; }
+.sheet-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.sheet-header h2{ font-size:19px; }
+.sheet-header button{ background:none; border:none; color:var(--text-soft); font-size:15px; font-weight:600; padding:6px;}
+
+.confirm-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:60; display:flex; align-items:center; justify-content:center; padding:24px;}
+.confirm-box{ background:var(--paper-raised); border-radius:16px; padding:22px; max-width:340px; width:100%; }
+.confirm-box h3{ font-size:17px; margin-bottom:8px;}
+.confirm-box p{ font-size:14px; color:var(--text-soft); margin:0 0 18px; }
+.confirm-actions{ display:flex; gap:10px; }
+.confirm-actions .btn{ flex:1; }
+
+.toast{
+  position:fixed; left:50%; transform:translateX(-50%); bottom: calc(var(--safe-bottom) + 90px); z-index:80;
+  background:var(--ink); color:var(--paper); padding:11px 18px; border-radius:100px; font-size:13.5px; font-weight:600;
+  box-shadow:0 8px 24px rgba(0,0,0,.25); max-width:88vw;
+}
+
+table.report-table{ width:100%; border-collapse:collapse; font-size:13.5px;}
+table.report-table th{ text-align:left; font-size:11.5px; color:var(--text-soft); font-weight:700; padding:8px 6px; border-bottom:1px solid var(--line);}
+table.report-table td{ padding:9px 6px; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums;}
+table.report-table tr:last-child td{ font-weight:700; border-bottom:none; }
+table.report-table td.num, table.report-table th.num{ text-align:right; }
+
+.cat-bar-row{ margin-bottom:12px; }
+.cat-bar-row .top{ display:flex; justify-content:space-between; font-size:13.5px; margin-bottom:5px;}
+.cat-bar-row .top .name{ font-weight:600; }
+.cat-bar-row .track{ height:8px; background:var(--line); border-radius:100px; overflow:hidden;}
+.cat-bar-row .fill{ height:100%; background:var(--accent); border-radius:100px; }
+
+.lock-screen{ position:fixed; inset:0; background:var(--paper); z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px;}
+.lock-screen h2{ font-size:20px; margin-bottom:4px;}
+.lock-screen p{ color:var(--text-soft); font-size:13.5px; margin-bottom:26px;}
+.pin-dots{ display:flex; gap:14px; margin-bottom:30px;}
+.pin-dot{ width:14px; height:14px; border-radius:50%; border:1.5px solid var(--muted);}
+.pin-dot.filled{ background:var(--accent); border-color:var(--accent);}
+.pin-pad{ display:grid; grid-template-columns:repeat(3,64px); gap:16px;}
+.pin-pad button{ width:64px; height:64px; border-radius:50%; border:1px solid var(--line); background:var(--paper-raised); font-size:22px; font-weight:600; color:var(--text);}
+.pin-pad button:active{ background:var(--accent-soft); }
+
+.settings-row{ display:flex; align-items:center; justify-content:space-between; padding:13px 0; border-bottom:1px solid var(--line);}
+.settings-row:last-child{ border-bottom:none;}
+.settings-row .l{ font-size:14.5px; font-weight:600;}
+.settings-row .r{ color:var(--text-soft); font-size:13.5px; }
+.link-row{ display:flex; align-items:center; justify-content:space-between; padding:13px 0; border-bottom:1px solid var(--line); background:none; border-left:none; border-right:none; border-top:none; width:100%; text-align:left; color:var(--text);}
+.link-row:last-child{ border-bottom:none;}
+.link-row .l{ font-size:14.5px; font-weight:600; display:flex; align-items:center; gap:10px;}
+.link-row svg{ width:18px; height:18px; color:var(--muted);}
+.cat-edit-row{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
+.cat-edit-row input{ flex:1; border:none; background:none; font-size:14.5px; font-weight:600; color:var(--text); outline:none;}
+.cat-edit-row button{ background:none; border:none; color:var(--muted); padding:4px;}
+
+/* Print stylesheet for PDF export via browser print */
+@media print{
+  .topbar,.tabbar,.sidebar,.fab,.period-select,.searchbar,.filter-row{ display:none !important; }
+  main{ padding-bottom:0 !important; overflow:visible !important;}
+  #printArea{ display:block !important; }
+  body *{ visibility:hidden; }
+  #printArea, #printArea *{ visibility:visible; }
+  #printArea{ position:absolute; left:0; top:0; width:100%; padding:20px; color:#000; background:#fff;}
+}
+#printArea{ display:none; }
+
+@media(min-width:860px){
+  .sidebar{ display:block; }
+  .topbar{ display:none; }
+  .tabbar{ display:none; }
+  .page{ max-width:1040px; padding-top:28px; }
+  .fab{ right:calc(50% - 520px + 24px); }
+  .grid-3{ grid-template-columns:repeat(3,1fr); }
+}
+@media(max-width:859px){
+  .fab{ }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   STORAGE
+============================================================ */
+const STORAGE_KEY = "mm_buchhaltung_v1";
+const DEFAULT_CATEGORIES = ["Software","Werbung / Marketing","Kamera / Fotoequipment","Computer / IT","Website","Domain / Hosting","Telefon","Internet","Bürobedarf","Fahrtkosten","Reisekosten","Weiterbildung","Versicherungen","Bankgebühren","Fremdleistungen","Sonstiges"];
+
+function defaultState(){
+  return {
+    version:1,
+    settings:{
+      companyName:"Markenmacher Grafikdesign",
+      kleinunternehmer:true,
+      theme:"auto", // auto | light | dark
+      pin:null, // 4-digit string or null
+      invoicePrefix:"RE-",
+      nextInvoiceNumber:1,
+      ustSatzStandard:19 // nur relevant, wenn Kleinunternehmerregelung AUS ist; frei konfigurierbar
+    },
+    categories: DEFAULT_CATEGORIES.slice(),
+    einnahmen:[],
+    ausgaben:[]
+  };
+}
+
+let state = loadState();
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    // shallow-merge with defaults to survive future upgrades
+    const base = defaultState();
+    return Object.assign(base, parsed, {
+      settings: Object.assign(base.settings, parsed.settings||{}),
+      categories: parsed.categories && parsed.categories.length ? parsed.categories : base.categories,
+      einnahmen: parsed.einnahmen || [],
+      ausgaben: parsed.ausgaben || []
+    });
+  }catch(e){
+    console.error("Konnte gespeicherte Daten nicht laden:", e);
+    return defaultState();
+  }
+}
+
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return true;
+  }catch(e){
+    console.error("Speichern fehlgeschlagen:", e);
+    toast("⚠️ Speichern fehlgeschlagen — der lokale Speicher ist vermutlich voll (z. B. durch viele Beleg-Fotos).");
+    return false;
+  }
+}
+
+function storageUsageBytes(){
+  try{
+    return new Blob([JSON.stringify(state)]).size;
+  }catch(e){ return 0; }
+}
+function formatBytes(b){
+  if(b < 1024) return b+" B";
+  if(b < 1024*1024) return (b/1024).toFixed(0)+" KB";
+  return (b/(1024*1024)).toFixed(1)+" MB";
+}
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function round2(n){ return Math.round((Number(n)||0) * 100) / 100; }
+
+/* ============================================================
+   HELPERS
+============================================================ */
+function formatCurrency(n){
+  n = Number(n)||0;
+  return n.toLocaleString("de-DE",{style:"currency",currency:"EUR"});
+}
+function formatDate(iso){
+  if(!iso) return "–";
+  const d = new Date(iso+"T00:00:00");
+  if(isNaN(d)) return iso;
+  return d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
+}
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function monthNamesDE(){
+  return ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+}
+function escapeHtml(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function toast(msg){
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 2600);
+}
+
+// Betriebsausgabe (anrechenbarer Betrag) berechnen
+function anrechenbarerBetrag(ausgabe){
+  if(ausgabe.gemischt){
+    const pct = Math.max(0, Math.min(100, Number(ausgabe.anteil)||0));
+    return Math.round(Number(ausgabe.betrag||0) * pct) / 100;
+  }
+  return Number(ausgabe.betrag)||0;
+}
+
+function einnahmenFuerJahr(jahr){
+  return state.einnahmen.filter(e=> e.datum && e.datum.slice(0,4) === String(jahr));
+}
+function ausgabenFuerJahr(jahr){
+  return state.ausgaben.filter(a=> a.datum && a.datum.slice(0,4) === String(jahr));
+}
+function sumEinnahmen(list){ return list.reduce((s,e)=> s + (Number(e.betrag)||0), 0); }
+function sumAusgaben(list){ return list.reduce((s,a)=> s + anrechenbarerBetrag(a), 0); }
+
+function allYearsWithData(){
+  const ys = new Set();
+  state.einnahmen.forEach(e=> e.datum && ys.add(e.datum.slice(0,4)));
+  state.ausgaben.forEach(a=> a.datum && ys.add(a.datum.slice(0,4)));
+  ys.add(String(new Date().getFullYear()));
+  return Array.from(ys).sort().reverse();
+}
+
+/* Zeitraum-Filter für Dashboard */
+function getRangeForPeriod(period, custom){
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  function iso(d){ return d.toISOString().slice(0,10); }
+  if(period === "month"){
+    return [iso(new Date(y,m,1)), iso(new Date(y,m+1,0))];
+  }
+  if(period === "lastMonth"){
+    return [iso(new Date(y,m-1,1)), iso(new Date(y,m,0))];
+  }
+  if(period === "quarter"){
+    const q = Math.floor(m/3);
+    return [iso(new Date(y,q*3,1)), iso(new Date(y,q*3+3,0))];
+  }
+  if(period === "year"){
+    return [y+"-01-01", y+"-12-31"];
+  }
+  if(period === "lastYear"){
+    return [(y-1)+"-01-01", (y-1)+"-12-31"];
+  }
+  if(period === "custom" && custom && custom.from && custom.to){
+    return [custom.from, custom.to];
+  }
+  return [y+"-01-01", y+"-12-31"];
+}
+function inRange(dateStr, from, to){
+  return dateStr && dateStr >= from && dateStr <= to;
+}
+
+/* ============================================================
+   ROUTER / APP STATE
+============================================================ */
+const ui = {
+  tab: "dashboard", // dashboard | einnahmen | ausgaben | euer | einstellungen
+  period: "year",
+  customRange: {from:todayISO(), to:todayISO()},
+  euerJahr: String(new Date().getFullYear()),
+  searchIncome: "",
+  searchExpense: "",
+  filterIncomeStatus: "all", // all|paid|open
+  filterExpenseCat: "all",
+  locked: !!state.settings.pin,
+  pinBuffer: ""
+};
+
+function setTab(t){ ui.tab = t; render(); window.scrollTo(0,0); }
+
+/* ============================================================
+   ICONS (inline minimal SVGs)
+============================================================ */
+const ICONS = {
+  dashboard:'<svg viewBox="0 0 24 24" fill="none"><path d="M3 13h8V3H3v10zM13 21h8V11h-8v10zM13 3v6h8V3h-8zM3 21h8v-6H3v6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+  income:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  expense:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  euer:'<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v14H6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12h6M9 16h6M9 8h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  settings:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.7 1.7 0 000-2l1.1-1.6-2-2L16.9 8.5a1.7 1.7 0 00-2 0L13.3 6.6h-2.6L9.6 8.5a1.7 1.7 0 00-2 0L5.9 7.4l-2 2L5 11a1.7 1.7 0 000 2l-1.1 1.6 2 2 1.6-1.1a1.7 1.7 0 002 0l1.1 1.9h2.6l1.1-1.9a1.7 1.7 0 002 0l1.6 1.1 2-2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  close:'<svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  camera:'<svg viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" stroke="currentColor" stroke-width="1.6"/></svg>',
+  file:'<svg viewBox="0 0 24 24" fill="none"><path d="M7 3h7l4 4v14H7z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v4h4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  chevron:'<svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  moon:'<svg viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 119.5 4a7 7 0 0010.5 10.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  auto:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 3.5A8.5 8.5 0 0112 20.5z" fill="currentColor"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 10V7a4 4 0 018 0v3" stroke="currentColor" stroke-width="1.6"/></svg>',
+  export:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12M7 10l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  backup:'<svg viewBox="0 0 24 24" fill="none"><path d="M4 4v6h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.6 15A8 8 0 1012 4a8 8 0 00-7.4 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  tag:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 3l9 9-9 9-9-9V3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/></svg>'
+};
+
+/* ============================================================
+   RENDER ROOT
+============================================================ */
+function render(){
+  applyTheme();
+  const app = document.getElementById("app");
+  if(ui.locked){
+    app.innerHTML = renderLockScreen();
+    bindLockScreen();
+    return;
+  }
+  app.innerHTML = `
+    <div class="shell">
+      ${renderSidebar()}
+      <main id="mainScroll">
+        ${renderTopbar()}
+        <div class="page">${renderPage()}</div>
+      </main>
+    </div>
+    ${renderTabbar()}
+    ${renderFab()}
+    <div id="printArea"></div>
+  `;
+  bindGlobalEvents();
+}
+
+function applyTheme(){
+  let mode = state.settings.theme;
+  if(mode === "auto"){
+    mode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  document.documentElement.setAttribute("data-theme", mode);
+}
+
+function renderSidebar(){
+  const items = [
+    {id:"dashboard", label:"Dashboard", icon:ICONS.dashboard},
+    {id:"einnahmen", label:"Einnahmen", icon:ICONS.income},
+    {id:"ausgaben", label:"Ausgaben", icon:ICONS.expense},
+    {id:"euer", label:"EÜR", icon:ICONS.euer},
+    {id:"einstellungen", label:"Einstellungen", icon:ICONS.settings},
+  ];
+  return `<div class="sidebar">
+    <div class="brand">
+      <div class="name">Markenmacher</div>
+      <div class="sub">EÜR &amp; Finanzen</div>
+    </div>
+    <nav>
+      ${items.map(it=>`<button class="navitem ${ui.tab===it.id?'active':''}" data-tab="${it.id}">${it.icon}<span>${it.label}</span></button>`).join("")}
+    </nav>
+  </div>`;
+}
+
+function pageTitle(){
+  return {dashboard:"Dashboard", einnahmen:"Einnahmen", ausgaben:"Ausgaben", euer:"EÜR / Steuer", einstellungen:"Einstellungen"}[ui.tab];
+}
+
+function renderTopbar(){
+  const themeIcon = {light:ICONS.sun, dark:ICONS.moon, auto:ICONS.auto}[state.settings.theme] || ICONS.auto;
+  return `<div class="topbar">
+    <h1>${pageTitle()}</h1>
+    <button class="icon-btn" id="themeToggleBtn" title="Darstellung wechseln">${themeIcon}</button>
+  </div>`;
+}
+
+function renderTabbar(){
+  const items = [
+    {id:"dashboard", label:"Dashboard", icon:ICONS.dashboard},
+    {id:"einnahmen", label:"Einnahmen", icon:ICONS.income},
+    {id:"ausgaben", label:"Ausgaben", icon:ICONS.expense},
+    {id:"euer", label:"EÜR", icon:ICONS.euer},
+    {id:"einstellungen", label:"Mehr", icon:ICONS.settings},
+  ];
+  return `<div class="tabbar">
+    ${items.map(it=>`<button class="tabitem ${ui.tab===it.id?'active':''}" data-tab="${it.id}">${it.icon}<span>${it.label}</span></button>`).join("")}
+  </div>`;
+}
+
+function renderFab(){
+  if(ui.tab === "einnahmen") return `<button class="fab" id="fabAdd" data-open="income-form">${ICONS.plus}</button>`;
+  if(ui.tab === "ausgaben") return `<button class="fab" id="fabAdd" data-open="expense-form">${ICONS.plus}</button>`;
+  if(ui.tab === "dashboard") return `<button class="fab" id="fabAdd" data-open="quick-add">${ICONS.plus}</button>`;
+  return "";
+}
+
+function renderPage(){
+  if(ui.tab === "dashboard") return renderDashboard();
+  if(ui.tab === "einnahmen") return renderIncomeList();
+  if(ui.tab === "ausgaben") return renderExpenseList();
+  if(ui.tab === "euer") return renderEuer();
+  if(ui.tab === "einstellungen") return renderSettings();
+  return "";
+}
+
+/* ============================================================
+   DASHBOARD
+============================================================ */
+function renderDashboard(){
+  const [from,to] = getRangeForPeriod(ui.period, ui.customRange);
+  const incomes = state.einnahmen.filter(e=>inRange(e.datum, from, to));
+  const expenses = state.ausgaben.filter(a=>inRange(a.datum, from, to));
+  const umsatz = sumEinnahmen(incomes);
+  const kosten = sumAusgaben(expenses);
+  const gewinn = umsatz - kosten;
+
+  const now = new Date();
+  const mFrom = getRangeForPeriod("month")[0], mTo = getRangeForPeriod("month")[1];
+  const monthIncomes = state.einnahmen.filter(e=>inRange(e.datum,mFrom,mTo));
+  const monthExpenses = state.ausgaben.filter(a=>inRange(a.datum,mFrom,mTo));
+  const monthUmsatz = sumEinnahmen(monthIncomes);
+  const monthKosten = sumAusgaben(monthExpenses);
+  const monthGewinn = monthUmsatz - monthKosten;
+  const offeneRechnungen = state.einnahmen.filter(e=>e.zahlungsstatus==="offen").length;
+
+  const periods = [
+    {id:"month",l:"Dieser Monat"},{id:"lastMonth",l:"Letzter Monat"},{id:"quarter",l:"Dieses Quartal"},
+    {id:"year",l:"Dieses Jahr"},{id:"lastYear",l:"Letztes Jahr"},{id:"custom",l:"Benutzerdefiniert"}
+  ];
+
+  return `
+    <div class="period-select">
+      ${periods.map(p=>`<button class="period-chip ${ui.period===p.id?'active':''}" data-period="${p.id}">${p.l}</button>`).join("")}
+    </div>
+    ${ui.period==="custom" ? renderCustomRangePicker() : ""}
+
+    <div class="hero">
+      <div class="label">Gewinn · ${periodLabel(ui.period)}</div>
+      <div class="amount">${formatCurrency(gewinn)}</div>
+      <div class="sub-row">
+        <div class="item"><div class="l">Umsatz</div><div class="v">${formatCurrency(umsatz)}</div></div>
+        <div class="item"><div class="l">Betriebsausgaben</div><div class="v">${formatCurrency(kosten)}</div></div>
+      </div>
+    </div>
+
+    <div class="section-title">Dieser Monat</div>
+    <div class="grid-3">
+      <div class="stat"><div class="label">Umsatz</div><div class="value">${formatCurrency(monthUmsatz)}</div></div>
+      <div class="stat"><div class="label">Ausgaben</div><div class="value">${formatCurrency(monthKosten)}</div></div>
+      <div class="stat"><div class="label">Gewinn</div><div class="value">${formatCurrency(monthGewinn)}</div></div>
+    </div>
+
+    <div class="grid-3" style="margin-top:10px;">
+      <div class="stat"><div class="label">Offene Rechnungen</div><div class="value">${offeneRechnungen}</div></div>
+      <div class="stat"><div class="label">Einnahmen (Anzahl)</div><div class="value">${state.einnahmen.length}</div></div>
+      <div class="stat"><div class="label">Ausgaben (Anzahl)</div><div class="value">${state.ausgaben.length}</div></div>
+    </div>
+
+    <div class="section-title">Einnahmen vs. Ausgaben pro Monat — ${new Date().getFullYear()}</div>
+    <div class="card">
+      <div class="chart-wrap">${renderMonthlyChart(String(new Date().getFullYear()))}</div>
+      <div style="display:flex;gap:16px;margin-top:12px;font-size:12.5px;color:var(--text-soft);">
+        <div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--good);display:inline-block;"></span>Einnahmen</div>
+        <div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--bad);display:inline-block;"></span>Ausgaben</div>
+      </div>
+    </div>
+
+    <div class="section-title">Letzte Einträge</div>
+    <div class="card">
+      ${renderRecentEntries()}
+    </div>
+  `;
+}
+
+function periodLabel(p){
+  return {month:"dieser Monat",lastMonth:"letzter Monat",quarter:"dieses Quartal",year:"dieses Jahr",lastYear:"letztes Jahr",custom:"Zeitraum"}[p];
+}
+
+function renderCustomRangePicker(){
+  return `<div class="card" style="margin-bottom:14px;">
+    <div class="grid-2">
+      <div class="field" style="margin-bottom:0;"><label>Von</label><input type="date" id="customFrom" value="${ui.customRange.from}"></div>
+      <div class="field" style="margin-bottom:0;"><label>Bis</label><input type="date" id="customTo" value="${ui.customRange.to}"></div>
+    </div>
+  </div>`;
+}
+
+function renderMonthlyChart(jahr){
+  const months = monthNamesDE();
+  const data = months.map((_,i)=>{
+    const mm = String(i+1).padStart(2,"0");
+    const inc = sumEinnahmen(state.einnahmen.filter(e=>e.datum && e.datum.slice(0,7)===jahr+"-"+mm));
+    const exp = sumAusgaben(state.ausgaben.filter(a=>a.datum && a.datum.slice(0,7)===jahr+"-"+mm));
+    return {inc,exp};
+  });
+  const max = Math.max(1, ...data.map(d=>Math.max(d.inc,d.exp)));
+  const w = 26, gap = 10, groupW = w*2+4, chartH = 140;
+  const totalW = data.length * (groupW+gap);
+  let bars = "";
+  data.forEach((d,i)=>{
+    const x = i*(groupW+gap);
+    const hInc = Math.max(2, (d.inc/max)*chartH);
+    const hExp = Math.max(2, (d.exp/max)*chartH);
+    bars += `<rect x="${x}" y="${chartH-hInc}" width="${w}" height="${hInc}" rx="3" fill="var(--good)"/>`;
+    bars += `<rect x="${x+w+4}" y="${chartH-hExp}" width="${w}" height="${hExp}" rx="3" fill="var(--bad)"/>`;
+    bars += `<text x="${x+groupW/2}" y="${chartH+16}" font-size="9.5" fill="var(--text-soft)" text-anchor="middle">${months[i].slice(0,3)}</text>`;
+  });
+  return `<svg width="${totalW}" height="${chartH+28}" viewBox="0 0 ${totalW} ${chartH+28}" style="min-width:${totalW}px;">${bars}</svg>`;
+}
+
+function renderRecentEntries(){
+  const all = [
+    ...state.einnahmen.map(e=>({...e, _type:"in"})),
+    ...state.ausgaben.map(a=>({...a, _type:"out"}))
+  ].sort((a,b)=> (b.datum||"").localeCompare(a.datum||"") || (b._created||0)-(a._created||0)).slice(0,6);
+  if(!all.length) return renderEmpty("Noch keine Einträge", "Füge deine erste Einnahme oder Ausgabe hinzu.");
+  return all.map(item=> item._type==="in" ? incomeRowHtml(item) : expenseRowHtml(item)).join("");
+}
+
+function renderEmpty(title, sub){
+  return `<div class="empty">${ICONS.file}<div class="t">${title}</div><div>${sub}</div></div>`;
+}
+
+/* ============================================================
+   EINNAHMEN LIST
+============================================================ */
+function incomeRowHtml(e){
+  const initials = (e.kunde||"?").trim().slice(0,1).toUpperCase();
+  return `<div class="list-row" data-open-view="income-view" data-id="${e.id}">
+    <div class="avatar in">${initials}</div>
+    <div class="main">
+      <div class="title">${escapeHtml(e.kunde||"Ohne Kunde")}</div>
+      <div class="meta">${formatDate(e.datum)} · ${escapeHtml(e.beschreibung||e.rechnungsnummer||"")}</div>
+      <span class="badge ${e.zahlungsstatus==='bezahlt'?'paid':'open'}">${e.zahlungsstatus==='bezahlt'?'Bezahlt':'Offen'}</span>
+    </div>
+    <div class="amt in">+${formatCurrency(e.betrag)}</div>
+  </div>`;
+}
+
+function renderIncomeList(){
+  let list = state.einnahmen.slice();
+  if(ui.searchIncome){
+    const q = ui.searchIncome.toLowerCase();
+    list = list.filter(e=> [e.kunde,e.beschreibung,e.rechnungsnummer,e.notiz].join(" ").toLowerCase().includes(q));
+  }
+  if(ui.filterIncomeStatus!=="all"){
+    list = list.filter(e=> e.zahlungsstatus === ui.filterIncomeStatus);
+  }
+  list.sort((a,b)=> (b.datum||"").localeCompare(a.datum||""));
+  const total = sumEinnahmen(list);
+
+  return `
+    <div class="searchbar">
+      ${ICONS.search}
+      <input id="searchIncomeInput" placeholder="Kunde, Beschreibung, Rechnungsnr. suchen" value="${escapeHtml(ui.searchIncome)}">
+    </div>
+    <div class="filter-row">
+      <button class="filter-chip ${ui.filterIncomeStatus==='all'?'active':''}" data-fstatus="all">Alle</button>
+      <button class="filter-chip ${ui.filterIncomeStatus==='bezahlt'?'active':''}" data-fstatus="bezahlt">Bezahlt</button>
+      <button class="filter-chip ${ui.filterIncomeStatus==='offen'?'active':''}" data-fstatus="offen">Offen</button>
+    </div>
+    <div class="stat" style="margin-bottom:12px;"><div class="label">Summe (gefiltert)</div><div class="value">${formatCurrency(total)}</div></div>
+    <div class="card">
+      ${list.length ? list.map(incomeRowHtml).join("") : renderEmpty("Keine Einnahmen gefunden","Tippe unten rechts auf + um eine Einnahme hinzuzufügen.")}
+    </div>
+  `;
+}
+
+/* ============================================================
+   AUSGABEN LIST
+============================================================ */
+function expenseRowHtml(a){
+  const betrag = anrechenbarerBetrag(a);
+  return `<div class="list-row" data-open-view="expense-view" data-id="${a.id}">
+    <div class="avatar out">${(a.kategorie||"?").slice(0,1)}</div>
+    <div class="main">
+      <div class="title">${escapeHtml(a.anbieter||a.kategorie||"Ausgabe")}</div>
+      <div class="meta">${formatDate(a.datum)} · ${escapeHtml(a.kategorie||"")}${a.gemischt?` · ${a.anteil}% geschäftl.`:""}</div>
+      <span class="badge" style="background:var(--paper-raised);border:1px solid var(--line);color:var(--text-soft);">${a.beleg ? "📎 Beleg" : "⚠️ Kein Beleg"}</span>
+    </div>
+    <div class="amt out">−${formatCurrency(betrag)}</div>
+  </div>`;
+}
+
+function renderExpenseList(){
+  let list = state.ausgaben.slice();
+  if(ui.searchExpense){
+    const q = ui.searchExpense.toLowerCase();
+    list = list.filter(a=> [a.anbieter,a.beschreibung,a.kategorie,a.belegnummer].join(" ").toLowerCase().includes(q));
+  }
+  if(ui.filterExpenseCat!=="all"){
+    list = list.filter(a=> a.kategorie === ui.filterExpenseCat);
+  }
+  list.sort((a,b)=> (b.datum||"").localeCompare(a.datum||""));
+  const total = sumAusgaben(list);
+
+  return `
+    <div class="searchbar">
+      ${ICONS.search}
+      <input id="searchExpenseInput" placeholder="Anbieter, Beschreibung, Kategorie suchen" value="${escapeHtml(ui.searchExpense)}">
+    </div>
+    <div class="filter-row">
+      <button class="filter-chip ${ui.filterExpenseCat==='all'?'active':''}" data-fcat="all">Alle</button>
+      ${state.categories.map(c=>`<button class="filter-chip ${ui.filterExpenseCat===c?'active':''}" data-fcat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("")}
+    </div>
+    <div class="stat" style="margin-bottom:12px;"><div class="label">Summe (gefiltert, anrechenbar)</div><div class="value">${formatCurrency(total)}</div></div>
+    <div class="card">
+      ${list.length ? list.map(expenseRowHtml).join("") : renderEmpty("Keine Ausgaben gefunden","Tippe unten rechts auf + um eine Ausgabe hinzuzufügen.")}
+    </div>
+  `;
+}
+
+/* ============================================================
+   EÜR
+============================================================ */
+function renderEuer(){
+  const years = allYearsWithData();
+  const jahr = ui.euerJahr;
+  const incomes = einnahmenFuerJahr(jahr);
+  const expenses = ausgabenFuerJahr(jahr);
+  const umsatz = sumEinnahmen(incomes);
+  const kosten = sumAusgaben(expenses);
+  const gewinn = umsatz - kosten;
+
+  // Monatstabelle
+  const months = monthNamesDE();
+  let rows = "", totalI=0,totalE=0,totalG=0;
+  months.forEach((name,i)=>{
+    const mm = String(i+1).padStart(2,"0");
+    const inc = sumEinnahmen(state.einnahmen.filter(e=>e.datum && e.datum.slice(0,7)===jahr+"-"+mm));
+    const exp = sumAusgaben(state.ausgaben.filter(a=>a.datum && a.datum.slice(0,7)===jahr+"-"+mm));
+    totalI+=inc; totalE+=exp; totalG+=(inc-exp);
+    rows += `<tr><td>${name}</td><td class="num">${formatCurrency(inc)}</td><td class="num">${formatCurrency(exp)}</td><td class="num">${formatCurrency(inc-exp)}</td></tr>`;
+  });
+  rows += `<tr><td>Gesamt</td><td class="num">${formatCurrency(totalI)}</td><td class="num">${formatCurrency(totalE)}</td><td class="num">${formatCurrency(totalG)}</td></tr>`;
+
+  // Kategorien
+  const catTotals = {};
+  expenses.forEach(a=>{ catTotals[a.kategorie||"Sonstiges"] = (catTotals[a.kategorie||"Sonstiges"]||0) + anrechenbarerBetrag(a); });
+  const catEntries = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  const catMax = Math.max(1, ...catEntries.map(c=>c[1]));
+
+  // Gemischte Ausgaben
+  const mixed = expenses.filter(a=>a.gemischt);
+
+  return `
+    <div class="period-select">
+      ${years.map(y=>`<button class="period-chip ${ui.euerJahr===y?'active':''}" data-euerjahr="${y}">${y}</button>`).join("")}
+    </div>
+
+    <div class="hero">
+      <div class="label">EÜR ${jahr} · Gewinn</div>
+      <div class="amount">${formatCurrency(gewinn)}</div>
+      <div class="sub-row">
+        <div class="item"><div class="l">Betriebseinnahmen</div><div class="v">${formatCurrency(umsatz)}</div></div>
+        <div class="item"><div class="l">Betriebsausgaben</div><div class="v">${formatCurrency(kosten)}</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px; font-size:12.5px; color:var(--text-soft); line-height:1.5;">
+      ℹ️ Diese Übersicht erfasst und berechnet ausschließlich die von dir eingegebenen Daten. Sie stellt keine Steuerberatung dar und ersetzt keinen Steuerberater. Steuerliche Regeln, Grenzwerte oder Freibeträge werden nicht automatisch angewendet.
+    </div>
+
+    <div class="section-title">Monatsübersicht ${jahr}</div>
+    <div class="card">
+      <table class="report-table">
+        <thead><tr><th>Monat</th><th class="num">Einnahmen</th><th class="num">Ausgaben</th><th class="num">Gewinn</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+
+    <div class="section-title">Ausgaben nach Kategorie</div>
+    <div class="card">
+      ${catEntries.length ? catEntries.map(([name,sum])=>`
+        <div class="cat-bar-row">
+          <div class="top"><span class="name">${escapeHtml(name)}</span><span>${formatCurrency(sum)}</span></div>
+          <div class="track"><div class="fill" style="width:${(sum/catMax*100).toFixed(1)}%"></div></div>
+        </div>
+      `).join("") : renderEmpty("Keine Ausgaben","Für dieses Jahr wurden noch keine Ausgaben erfasst.")}
+      ${catEntries.length ? `<div style="display:flex;justify-content:space-between;font-weight:700;margin-top:6px;padding-top:10px;border-top:1px solid var(--line);"><span>Gesamtausgaben</span><span>${formatCurrency(kosten)}</span></div>` : ""}
+    </div>
+
+    ${mixed.length ? `
+    <div class="section-title">Anteilig angesetzte Ausgaben</div>
+    <div class="card">
+      ${mixed.map(a=>`<div class="list-row">
+        <div class="main">
+          <div class="title">${escapeHtml(a.anbieter||a.kategorie)}</div>
+          <div class="meta">${formatDate(a.datum)} · Gesamt ${formatCurrency(a.betrag)} × ${a.anteil}% geschäftlich</div>
+        </div>
+        <div class="amt out">${formatCurrency(anrechenbarerBetrag(a))}</div>
+      </div>`).join("")}
+    </div>` : ""}
+
+    <div class="section-title">Export</div>
+    <div class="card" style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-secondary btn-block" id="exportCsvBtn">${ICONS.export} CSV exportieren (Einnahmen &amp; Ausgaben)</button>
+      <button class="btn btn-secondary btn-block" id="exportExcelBtn">${ICONS.export} Excel-kompatibel exportieren (.csv)</button>
+      <button class="btn btn-secondary btn-block" id="exportPdfBtn">${ICONS.export} Jahresauswertung als PDF (Drucken)</button>
+    </div>
+  `;
+}
+
+/* ============================================================
+   EINSTELLUNGEN
+============================================================ */
+function renderSettings(){
+  return `
+    <div class="section-title">Unternehmen</div>
+    <div class="card">
+      <div class="field" style="margin-bottom:0;">
+        <label>Name des Kleingewerbes</label>
+        <input type="text" id="companyNameInput" value="${escapeHtml(state.settings.companyName)}">
+      </div>
+    </div>
+
+    <div class="section-title">Steuer</div>
+    <div class="card">
+      <div class="toggle-row" style="${state.settings.kleinunternehmer?'border-bottom:none;':''}">
+        <div><div class="t">Kleinunternehmerregelung</div><div class="d">Wenn aktiv, wird auf Einnahmen keine Umsatzsteuer berechnet oder ausgewiesen.</div></div>
+        <button class="switch ${state.settings.kleinunternehmer?'on':''}" id="kuSwitch"></button>
+      </div>
+      ${!state.settings.kleinunternehmer ? `
+      <div class="field" style="margin-top:10px; margin-bottom:0;">
+        <label>Standard-Umsatzsteuersatz (%)</label>
+        <input type="number" min="0" max="100" step="0.5" id="ustSatzStandardInput" value="${state.settings.ustSatzStandard}">
+        <div class="field-hint">Wird bei neuen Einnahmen als Vorschlag verwendet. Kein fest einprogrammierter Steuerwert — du kannst ihn jederzeit ändern.</div>
+      </div>` : ""}
+    </div>
+
+    <div class="section-title">Kategorien für Ausgaben</div>
+    <div class="card">
+      <div id="catList">${renderCategoryList()}</div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <input type="text" id="newCatInput" placeholder="Neue Kategorie" style="flex:1; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--paper-raised); color:var(--text);">
+        <button class="btn btn-secondary" id="addCatBtn">${ICONS.plus}</button>
+      </div>
+    </div>
+
+    <div class="section-title">Darstellung</div>
+    <div class="card">
+      <div class="toggle-row" style="border-bottom:none;">
+        <div><div class="t">Design</div><div class="d">Hell, Dunkel oder automatisch nach Systemeinstellung.</div></div>
+      </div>
+      <div class="seg" style="margin-top:4px;">
+        <button data-theme-choice="light" class="${state.settings.theme==='light'?'active':''}">Hell</button>
+        <button data-theme-choice="dark" class="${state.settings.theme==='dark'?'active':''}">Dunkel</button>
+        <button data-theme-choice="auto" class="${state.settings.theme==='auto'?'active':''}">Auto</button>
+      </div>
+    </div>
+
+    <div class="section-title">Sicherheit</div>
+    <div class="card">
+      <div class="toggle-row">
+        <div><div class="t">App-Sperre (PIN)</div><div class="d">${state.settings.pin ? "Aktiv — 4-stelliger Code beim Öffnen erforderlich." : "Schützt die App beim Öffnen mit einem 4-stelligen Code."}</div></div>
+        <button class="switch ${state.settings.pin?'on':''}" id="pinSwitch"></button>
+      </div>
+    </div>
+
+    <div class="section-title">Speicherplatz</div>
+    <div class="card">
+      <div class="settings-row" style="border-bottom:none;">
+        <div class="l">Belegte lokale Speicherung</div>
+        <div class="r">${formatBytes(storageUsageBytes())}</div>
+      </div>
+      <div class="field-hint" style="margin-top:0;">iPhones/iPads erlauben je nach Gerät meist ca. 5–10 MB pro App für diese Art von Speicher. Beleg-Fotos sind der größte Faktor — erstelle regelmäßig ein Backup, besonders bevor der Speicher voll wird.</div>
+    </div>
+
+    <div class="section-title">Export &amp; Backup</div>
+    <div class="card" style="display:flex; flex-direction:column;">
+      <button class="link-row" id="settingsExportCsv"><span class="l">${ICONS.export} CSV exportieren</span>${ICONS.chevron}</button>
+      <button class="link-row" id="settingsBackup"><span class="l">${ICONS.backup} Backup erstellen (JSON)</span>${ICONS.chevron}</button>
+      <button class="link-row" id="settingsRestore"><span class="l">${ICONS.backup} Backup wiederherstellen</span>${ICONS.chevron}</button>
+      <input type="file" id="restoreFileInput" accept="application/json" class="hidden">
+    </div>
+
+    <div class="section-title">Über</div>
+    <div class="card" style="font-size:12.5px; color:var(--text-soft); line-height:1.6;">
+      Markenmacher Buchhaltung — EÜR &amp; Finanzen für Kleingewerbe.<br>
+      Alle Daten werden ausschließlich lokal auf diesem Gerät gespeichert. Diese App ersetzt keine Steuerberatung.
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <button class="btn btn-danger btn-block" id="resetAllBtn">Alle Daten löschen</button>
+    </div>
+  `;
+}
+
+function renderCategoryList(){
+  return state.categories.map((c,i)=>`
+    <div class="cat-edit-row">
+      <input type="text" value="${escapeHtml(c)}" data-cat-index="${i}">
+      <button data-del-cat="${i}">${ICONS.trash}</button>
+    </div>
+  `).join("");
+}
+
+/* ============================================================
+   LOCK SCREEN
+============================================================ */
+function renderLockScreen(){
+  const filled = ui.pinBuffer.length;
+  return `<div class="lock-screen">
+    <h2>Gesperrt</h2>
+    <p>Gib deinen 4-stelligen Code ein</p>
+    <div class="pin-dots">${[0,1,2,3].map(i=>`<div class="pin-dot ${i<filled?'filled':''}"></div>`).join("")}</div>
+    <div class="pin-pad">
+      ${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-pin="${n}">${n}</button>`).join("")}
+      <div></div>
+      <button data-pin="0">0</button>
+      <button data-pin="back">⌫</button>
+    </div>
+  </div>`;
+}
+function bindLockScreen(){
+  document.querySelectorAll("[data-pin]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const v = btn.getAttribute("data-pin");
+      if(v==="back"){ ui.pinBuffer = ui.pinBuffer.slice(0,-1); }
+      else if(ui.pinBuffer.length<4){ ui.pinBuffer += v; }
+      if(ui.pinBuffer.length===4){
+        if(ui.pinBuffer === state.settings.pin){
+          ui.locked=false; ui.pinBuffer="";
+          render();
+        } else {
+          toast("Falscher Code");
+          setTimeout(()=>{ ui.pinBuffer=""; render(); }, 400);
+          return;
+        }
+      }
+      render();
+    });
+  });
+}
+
+/* ============================================================
+   FORM SHEETS: Einnahme / Ausgabe
+============================================================ */
+let sheetState = null; // {type:'income'|'expense', mode:'add'|'edit', data:{...}, errors:{}}
+
+function openIncomeForm(existing){
+  sheetState = {
+    type:"income", mode: existing?"edit":"add",
+    data: existing ? {...existing} : {
+      id:null, datum: todayISO(), rechnungsnummer: nextInvoiceNumber(), kunde:"", beschreibung:"",
+      betrag:"", zahlungsstatus:"offen", zahlungsdatum:"", zahlungsart:"Überweisung", notiz:"", beleg:null
+    },
+    errors:{}
+  };
+  renderSheet();
+}
+function nextInvoiceNumber(){
+  const n = state.settings.nextInvoiceNumber||1;
+  return state.settings.invoicePrefix + String(n).padStart(3,"0");
+}
+function openExpenseForm(existing){
+  sheetState = {
+    type:"expense", mode: existing?"edit":"add",
+    data: existing ? {...existing} : {
+      id:null, datum: todayISO(), belegnummer:"", anbieter:"", beschreibung:"", kategorie: state.categories[0]||"Sonstiges",
+      betrag:"", zahlungsart:"Überweisung", notiz:"", beleg:null, gemischt:false, anteil:100, begruendung:""
+    },
+    errors:{}
+  };
+  renderSheet();
+}
+function closeSheet(){ sheetState = null; renderOverlayOnly(); }
+
+function renderOverlayOnly(){
+  const existing = document.getElementById("sheetOverlay");
+  if(existing) existing.remove();
+  if(sheetState){
+    document.body.insertAdjacentHTML("beforeend", `<div class="sheet-backdrop" id="sheetOverlay">${sheetState.viewMode ? renderViewSheetHtml() : renderFormSheetHtml()}</div>`);
+    bindSheetEvents();
+  }
+}
+function renderSheet(){ renderOverlayOnly(); }
+
+function renderFormSheetHtml(){
+  const s = sheetState;
+  const title = s.type==="income" ? (s.mode==="add"?"Neue Einnahme":"Einnahme bearbeiten") : (s.mode==="add"?"Neue Ausgabe":"Ausgabe bearbeiten");
+  return `<div class="sheet" id="sheetPanel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><h2>${title}</h2><button id="sheetCloseBtn">${ICONS.close}</button></div>
+    ${s.type==="income" ? renderIncomeFormFields(s) : renderExpenseFormFields(s)}
+    <div style="display:flex; gap:10px; margin-top:6px;">
+      ${s.mode==="edit" ? `<button class="btn btn-danger" id="sheetDeleteBtn">${ICONS.trash}</button>` : ""}
+      <button class="btn btn-primary btn-block" id="sheetSaveBtn">Speichern</button>
+    </div>
+  </div>`;
+}
+
+function field(label, inner, key, errors, hint){
+  const err = errors && errors[key];
+  return `<div class="field ${err?'has-error':''}">
+    <label>${label}</label>
+    ${inner}
+    ${err ? `<div class="field-error">${err}</div>` : hint ? `<div class="field-hint">${hint}</div>` : ""}
+  </div>`;
+}
+
+function renderIncomeFormFields(s){
+  const d = s.data, e = s.errors;
+  const kuOff = !state.settings.kleinunternehmer;
+  if(kuOff && d.enthaeltUst===undefined) d.enthaeltUst = false;
+  if(kuOff && (d.ustSatz===undefined || d.ustSatz===null || d.ustSatz==="")) d.ustSatz = state.settings.ustSatzStandard;
+  const betragNum = Number(d.betrag)||0;
+  const ustSatzNum = Math.max(0, Number(d.ustSatz)||0);
+  const ustBetrag = d.enthaeltUst ? round2(betragNum - betragNum/(1+ustSatzNum/100)) : 0;
+  const netto = d.enthaeltUst ? round2(betragNum - ustBetrag) : betragNum;
+  return `
+    ${field("Datum", `<input type="date" id="f_datum" value="${d.datum||""}">`, "datum", e)}
+    ${field("Rechnungsnummer", `<input type="text" id="f_rechnungsnummer" value="${escapeHtml(d.rechnungsnummer||"")}">`, "rechnungsnummer", e)}
+    ${field("Kunde", `<input type="text" id="f_kunde" value="${escapeHtml(d.kunde||"")}" placeholder="z. B. Muster GmbH">`, "kunde", e)}
+    ${field("Beschreibung / Leistung", `<textarea id="f_beschreibung" placeholder="z. B. Logo Design">${escapeHtml(d.beschreibung||"")}</textarea>`, "beschreibung", e)}
+    ${field("Betrag", `<input type="number" step="0.01" min="0" id="f_betrag" value="${d.betrag}" placeholder="0,00">`, "betrag", e, kuOff?"Gesamtbetrag der Rechnung (Bruttobetrag).":null)}
+    ${kuOff ? `
+    <div class="toggle-row">
+      <div><div class="t">Enthält Umsatzsteuer</div><div class="d">Nur zur Erfassung — die Umsatzsteuer wird nicht automatisch von deinem Gewinn abgezogen.</div></div>
+      <button class="switch ${d.enthaeltUst?'on':''}" id="ustSwitch"></button>
+    </div>
+    <div id="ustFields" class="${d.enthaeltUst?'':'hidden'}">
+      ${field("Umsatzsteuersatz (%)", `<input type="number" min="0" max="100" step="0.5" id="f_ustSatz" value="${d.ustSatz}">`, "ustSatz", e)}
+      <div class="mix-calc" id="ustCalcBox">
+        <div class="row"><span>Nettobetrag</span><span id="ustNetto">${formatCurrency(netto)}</span></div>
+        <div class="row"><span>Enthaltene Umsatzsteuer</span><span id="ustBetragEl">${formatCurrency(ustBetrag)}</span></div>
+        <div class="row total"><span>Bruttobetrag (Rechnung)</span><span id="ustBrutto">${formatCurrency(betragNum)}</span></div>
+      </div>
+    </div>` : ""}
+    <div class="field">
+      <label>Zahlungsstatus</label>
+      <div class="seg">
+        <button type="button" data-seg="zahlungsstatus" data-val="offen" class="${d.zahlungsstatus==='offen'?'active':''}">Offen</button>
+        <button type="button" data-seg="zahlungsstatus" data-val="bezahlt" class="${d.zahlungsstatus==='bezahlt'?'active':''}">Bezahlt</button>
+      </div>
+    </div>
+    ${field("Zahlungsdatum", `<input type="date" id="f_zahlungsdatum" value="${d.zahlungsdatum||""}">`, "zahlungsdatum", e)}
+    ${field("Zahlungsart", `<select id="f_zahlungsart">
+        ${["Überweisung","Bar","PayPal","Sonstiges"].map(o=>`<option ${d.zahlungsart===o?'selected':''}>${o}</option>`).join("")}
+      </select>`, "zahlungsart", e)}
+    ${field("Notiz", `<textarea id="f_notiz">${escapeHtml(d.notiz||"")}</textarea>`, "notiz", e)}
+    ${renderReceiptField(d)}
+  `;
+}
+
+function renderExpenseFormFields(s){
+  const d = s.data, e = s.errors;
+  const gesamt = Number(d.betrag)||0;
+  const anteil = Math.max(0,Math.min(100,Number(d.anteil)||0));
+  const anrechenbar = Math.round(gesamt*anteil)/100;
+  return `
+    ${field("Datum", `<input type="date" id="f_datum" value="${d.datum||""}">`, "datum", e)}
+    ${field("Belegnummer", `<input type="text" id="f_belegnummer" value="${escapeHtml(d.belegnummer||"")}">`, "belegnummer", e)}
+    ${field("Händler / Anbieter", `<input type="text" id="f_anbieter" value="${escapeHtml(d.anbieter||"")}">`, "anbieter", e)}
+    ${field("Beschreibung", `<textarea id="f_beschreibung">${escapeHtml(d.beschreibung||"")}</textarea>`, "beschreibung", e)}
+    ${field("Kategorie", `<select id="f_kategorie">${state.categories.map(c=>`<option ${d.kategorie===c?'selected':''}>${escapeHtml(c)}</option>`).join("")}</select>`, "kategorie", e)}
+    ${field("Gesamtbetrag", `<input type="number" step="0.01" min="0" id="f_betrag" value="${d.betrag}" placeholder="0,00">`, "betrag", e)}
+    ${field("Zahlungsart", `<select id="f_zahlungsart">${["Überweisung","Bar","PayPal","Sonstiges"].map(o=>`<option ${d.zahlungsart===o?'selected':''}>${o}</option>`).join("")}</select>`, "zahlungsart", e)}
+
+    <div class="toggle-row">
+      <div><div class="t">Gemischte Ausgabe</div><div class="d">Privat und geschäftlich genutzt — nur der geschäftliche Anteil zählt als Betriebsausgabe.</div></div>
+      <button class="switch ${d.gemischt?'on':''}" id="mixedSwitch"></button>
+    </div>
+
+    <div id="mixedFields" class="${d.gemischt?'':'hidden'}">
+      ${field("Geschäftlicher Anteil (%)", `<input type="number" min="0" max="100" step="1" id="f_anteil" value="${d.anteil}">`, "anteil", e)}
+      ${field("Begründung des Anteils (optional)", `<input type="text" id="f_begruendung" value="${escapeHtml(d.begruendung||"")}" placeholder="z. B. geschäftliche Nutzung ca. 60 %">`, "begruendung", e)}
+      <div class="mix-calc" id="mixCalcBox">
+        <div class="row"><span>Gesamtbetrag</span><span id="mixTotal">${formatCurrency(gesamt)}</span></div>
+        <div class="row"><span>Geschäftlicher Anteil</span><span id="mixPct">${anteil}%</span></div>
+        <div class="row total"><span>Betriebsausgabe</span><span id="mixResult">${formatCurrency(anrechenbar)}</span></div>
+      </div>
+    </div>
+
+    ${field("Notiz", `<textarea id="f_notiz">${escapeHtml(d.notiz||"")}</textarea>`, "notiz", e)}
+    ${renderReceiptField(d)}
+  `;
+}
+
+function renderReceiptField(d){
+  return `<div class="field">
+    <label>Beleg</label>
+    <div class="receipt-box ${d.beleg?'has-file':''}" id="receiptBox">
+      ${d.beleg ? `
+        <div class="receipt-preview">
+          ${d.beleg.type && d.beleg.type.startsWith("image") ? `<img src="${d.beleg.dataUrl}">` : `<div class="icon">${ICONS.file}</div>`}
+          <div style="flex:1;"><div style="font-weight:600; font-size:13.5px;">${escapeHtml(d.beleg.name||"Beleg")}</div><div style="font-size:12px; color:var(--text-soft);">Hinzugefügt</div></div>
+          <button type="button" id="removeReceiptBtn" style="background:none;border:none;color:var(--bad);">${ICONS.trash}</button>
+        </div>
+      ` : `
+        <div style="color:var(--text-soft); font-size:13px; margin-bottom:2px;">Kein Beleg hinterlegt</div>
+        <div class="chip-row">
+          <label class="btn btn-secondary" style="cursor:pointer;">${ICONS.camera} Kamera<input type="file" accept="image/*" capture="environment" class="hidden" id="receiptCameraInput"></label>
+          <label class="btn btn-secondary" style="cursor:pointer;">${ICONS.file} Foto/PDF<input type="file" accept="image/*,application/pdf" class="hidden" id="receiptFileInput"></label>
+        </div>
+      `}
+    </div>
+  </div>`;
+}
+
+/* ---- Detail view sheet (tap on a row) ---- */
+function openViewSheet(type, id){
+  const data = type==="income" ? state.einnahmen.find(x=>x.id===id) : state.ausgaben.find(x=>x.id===id);
+  if(!data) return;
+  sheetState = {type, viewMode:true, data};
+  renderSheet();
+}
+function renderViewSheetHtml(){
+  const s = sheetState, d = s.data;
+  if(s.type==="income"){
+    return `<div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header"><h2>${escapeHtml(d.kunde||"Einnahme")}</h2><button id="sheetCloseBtn">${ICONS.close}</button></div>
+      <div class="hero" style="padding:20px;"><div class="label">Betrag</div><div class="amount" style="font-size:32px;">${formatCurrency(d.betrag)}</div></div>
+      <table class="report-table">
+        <tr><td>Datum</td><td class="num">${formatDate(d.datum)}</td></tr>
+        <tr><td>Rechnungsnummer</td><td class="num">${escapeHtml(d.rechnungsnummer||"–")}</td></tr>
+        <tr><td>Beschreibung</td><td class="num">${escapeHtml(d.beschreibung||"–")}</td></tr>
+        <tr><td>Status</td><td class="num">${d.zahlungsstatus==='bezahlt'?'Bezahlt':'Offen'}</td></tr>
+        <tr><td>Zahlungsdatum</td><td class="num">${formatDate(d.zahlungsdatum)}</td></tr>
+        <tr><td>Zahlungsart</td><td class="num">${escapeHtml(d.zahlungsart||"–")}</td></tr>
+        ${d.enthaeltUst ? `<tr><td>davon Umsatzsteuer (${d.ustSatz}%)</td><td class="num">${formatCurrency(d.ustBetrag)}</td></tr>
+        <tr><td>Nettobetrag</td><td class="num">${formatCurrency(d.nettobetrag)}</td></tr>` : ""}
+        ${d.notiz ? `<tr><td>Notiz</td><td class="num">${escapeHtml(d.notiz)}</td></tr>` : ""}
+      </table>
+      ${d.beleg ? `<div class="card" style="margin-top:12px;">${d.beleg.type && d.beleg.type.startsWith("image") ? `<img src="${d.beleg.dataUrl}" style="width:100%;border-radius:10px;">` : `<a href="${d.beleg.dataUrl}" target="_blank" style="color:var(--accent); font-weight:600;">${ICONS.file} Beleg öffnen</a>`}</div>` : ""}
+      <div style="display:flex; gap:10px; margin-top:16px;">
+        <button class="btn btn-secondary btn-block" id="sheetEditBtn">Bearbeiten</button>
+        <button class="btn btn-danger" id="sheetDeleteBtn">${ICONS.trash}</button>
+      </div>
+    </div>`;
+  } else {
+    return `<div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header"><h2>${escapeHtml(d.anbieter||d.kategorie||"Ausgabe")}</h2><button id="sheetCloseBtn">${ICONS.close}</button></div>
+      <div class="hero" style="padding:20px;"><div class="label">Betriebsausgabe</div><div class="amount" style="font-size:32px;">${formatCurrency(anrechenbarerBetrag(d))}</div></div>
+      <table class="report-table">
+        <tr><td>Datum</td><td class="num">${formatDate(d.datum)}</td></tr>
+        <tr><td>Kategorie</td><td class="num">${escapeHtml(d.kategorie||"–")}</td></tr>
+        <tr><td>Belegnummer</td><td class="num">${escapeHtml(d.belegnummer||"–")}</td></tr>
+        <tr><td>Beschreibung</td><td class="num">${escapeHtml(d.beschreibung||"–")}</td></tr>
+        <tr><td>Gesamtbetrag</td><td class="num">${formatCurrency(d.betrag)}</td></tr>
+        ${d.gemischt ? `<tr><td>Geschäftlicher Anteil</td><td class="num">${d.anteil}%</td></tr>` : ""}
+        ${d.gemischt && d.begruendung ? `<tr><td>Begründung</td><td class="num">${escapeHtml(d.begruendung)}</td></tr>` : ""}
+        <tr><td>Zahlungsart</td><td class="num">${escapeHtml(d.zahlungsart||"–")}</td></tr>
+        ${d.notiz ? `<tr><td>Notiz</td><td class="num">${escapeHtml(d.notiz)}</td></tr>` : ""}
+      </table>
+      ${d.beleg ? `<div class="card" style="margin-top:12px;">${d.beleg.type && d.beleg.type.startsWith("image") ? `<img src="${d.beleg.dataUrl}" style="width:100%;border-radius:10px;">` : `<a href="${d.beleg.dataUrl}" target="_blank" style="color:var(--accent); font-weight:600;">${ICONS.file} Beleg öffnen</a>`}</div>` : `<div class="card" style="margin-top:12px; color:var(--warn);">⚠️ Kein Beleg hinterlegt</div>`}
+      <div style="display:flex; gap:10px; margin-top:16px;">
+        <button class="btn btn-secondary btn-block" id="sheetEditBtn">Bearbeiten</button>
+        <button class="btn btn-danger" id="sheetDeleteBtn">${ICONS.trash}</button>
+      </div>
+    </div>`;
+  }
+}
+
+/* ---- Quick add (dashboard fab) ---- */
+function openQuickAdd(){
+  const overlay = document.getElementById("sheetOverlay");
+  if(overlay) overlay.remove();
+  document.body.insertAdjacentHTML("beforeend", `<div class="sheet-backdrop" id="sheetOverlay">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header"><h2>Neuer Eintrag</h2><button id="sheetCloseBtn">${ICONS.close}</button></div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button class="btn btn-secondary btn-block" id="quickIncomeBtn">${ICONS.income} Einnahme hinzufügen</button>
+        <button class="btn btn-secondary btn-block" id="quickExpenseBtn">${ICONS.expense} Ausgabe hinzufügen</button>
+      </div>
+    </div>
+  </div>`);
+  document.getElementById("sheetCloseBtn").onclick = ()=>document.getElementById("sheetOverlay").remove();
+  document.getElementById("sheetOverlay").addEventListener("click", (e)=>{ if(e.target.id==="sheetOverlay") e.currentTarget.remove(); });
+  document.getElementById("quickIncomeBtn").onclick = ()=>{ document.getElementById("sheetOverlay").remove(); openIncomeForm(null); };
+  document.getElementById("quickExpenseBtn").onclick = ()=>{ document.getElementById("sheetOverlay").remove(); openExpenseForm(null); };
+}
+
+/* ============================================================
+   FILE (RECEIPT) HANDLING — compress image via canvas, store as dataURL
+============================================================ */
+const MAX_PDF_BYTES = 4*1024*1024; // 4 MB — PDFs are stored as-is (not compressed)
+const WARN_TOTAL_BYTES = 6*1024*1024; // warn once localStorage usage crosses ~6 MB
+
+function handleReceiptFile(file){
+  if(!file) return;
+  if(file.type.startsWith("image/")){
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      const img = new Image();
+      img.onload = function(){
+        // Downscale progressively until the encoded image is reasonably small,
+        // since every receipt is stored as base64 text inside localStorage.
+        let maxW = 1200, quality = 0.75, dataUrl;
+        for(let attempt=0; attempt<4; attempt++){
+          const scale = Math.min(1, maxW/img.width);
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, img.width*scale); canvas.height = Math.max(1, img.height*scale);
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img,0,0,canvas.width,canvas.height);
+          dataUrl = canvas.toDataURL("image/jpeg", quality);
+          if(dataUrl.length < 900*1024) break; // under ~900 KB, good enough
+          maxW = Math.round(maxW*0.75); quality = Math.max(0.5, quality-0.1);
+        }
+        sheetState.data.beleg = {name:file.name||"Beleg.jpg", type:"image/jpeg", dataUrl};
+        renderSheet();
+        warnIfStorageGettingFull();
+      };
+      img.onerror = function(){ toast("Bild konnte nicht gelesen werden."); };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    if(file.size > MAX_PDF_BYTES){
+      toast("Diese PDF-Datei ist größer als 4 MB und wird nicht angehängt — bitte eine kleinere Datei wählen.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      sheetState.data.beleg = {name:file.name||"Beleg.pdf", type:file.type||"application/pdf", dataUrl:ev.target.result};
+      renderSheet();
+      warnIfStorageGettingFull();
+    };
+    reader.readAsDataURL(file);
+  }
+}
+function warnIfStorageGettingFull(){
+  if(storageUsageBytes() > WARN_TOTAL_BYTES){
+    toast("⚠️ Der lokale Speicher füllt sich (viele Beleg-Fotos). Erstelle ein Backup und lösche ggf. alte Belege.");
+  }
+}
+
+/* ============================================================
+   VALIDATION + SAVE
+============================================================ */
+function validateIncome(d){
+  const err = {};
+  if(!d.datum) err.datum = "Datum ist erforderlich.";
+  if(!d.kunde || !d.kunde.trim()) err.kunde = "Kunde ist erforderlich.";
+  if(d.betrag===""||d.betrag==null||isNaN(d.betrag)) err.betrag = "Bitte einen gültigen Betrag angeben.";
+  else if(Number(d.betrag) < 0) err.betrag = "Der Betrag darf nicht negativ sein.";
+  if(d.zahlungsstatus==="bezahlt" && !d.zahlungsdatum) err.zahlungsdatum = "Bitte Zahlungsdatum angeben.";
+  return err;
+}
+function validateExpense(d){
+  const err = {};
+  if(!d.datum) err.datum = "Datum ist erforderlich.";
+  if(!d.anbieter || !d.anbieter.trim()) err.anbieter = "Anbieter ist erforderlich.";
+  if(!d.kategorie) err.kategorie = "Bitte Kategorie wählen.";
+  if(d.betrag===""||d.betrag==null||isNaN(d.betrag)) err.betrag = "Bitte einen gültigen Betrag angeben.";
+  else if(Number(d.betrag) < 0) err.betrag = "Der Betrag darf nicht negativ sein.";
+  if(d.gemischt){
+    const a = Number(d.anteil);
+    if(isNaN(a) || a<0 || a>100) err.anteil = "Der Anteil muss zwischen 0 % und 100 % liegen.";
+  }
+  return err;
+}
+
+function saveSheet(){
+  const s = sheetState;
+  if(s.type==="income"){
+    const d = s.data;
+    d.datum = document.getElementById("f_datum").value;
+    d.rechnungsnummer = document.getElementById("f_rechnungsnummer").value.trim();
+    d.kunde = document.getElementById("f_kunde").value.trim();
+    d.beschreibung = document.getElementById("f_beschreibung").value.trim();
+    d.betrag = document.getElementById("f_betrag").value;
+    d.zahlungsdatum = document.getElementById("f_zahlungsdatum").value;
+    d.zahlungsart = document.getElementById("f_zahlungsart").value;
+    d.notiz = document.getElementById("f_notiz").value.trim();
+    if(!state.settings.kleinunternehmer){
+      const ustSwitchEl = document.getElementById("ustSwitch");
+      if(ustSwitchEl) d.enthaeltUst = ustSwitchEl.classList.contains("on");
+      if(d.enthaeltUst && document.getElementById("f_ustSatz")) d.ustSatz = Number(document.getElementById("f_ustSatz").value);
+    } else {
+      d.enthaeltUst = false; d.ustSatz = null;
+    }
+    const err = validateIncome(d);
+    if(Object.keys(err).length){ s.errors = err; renderSheet(); return; }
+    d.betrag = Number(d.betrag);
+    if(d.enthaeltUst){
+      d.ustBetrag = round2(d.betrag - d.betrag/(1+(Number(d.ustSatz)||0)/100));
+      d.nettobetrag = round2(d.betrag - d.ustBetrag);
+    } else { d.ustBetrag = 0; d.nettobetrag = d.betrag; }
+    let prevSnapshot, prevInvoiceNr;
+    if(s.mode==="add"){
+      d.id = uid(); d._created = Date.now();
+      state.einnahmen.push(d);
+      prevInvoiceNr = state.settings.nextInvoiceNumber;
+      state.settings.nextInvoiceNumber = (state.settings.nextInvoiceNumber||1)+1;
+    } else {
+      const idx = state.einnahmen.findIndex(x=>x.id===d.id);
+      prevSnapshot = state.einnahmen[idx];
+      state.einnahmen[idx] = d;
+    }
+    if(!saveState()){
+      // rollback so in-memory state matches what's actually persisted
+      if(s.mode==="add"){ state.einnahmen.pop(); state.settings.nextInvoiceNumber = prevInvoiceNr; }
+      else { const idx = state.einnahmen.findIndex(x=>x.id===d.id); state.einnahmen[idx] = prevSnapshot; }
+      toast("Nicht gespeichert — evtl. hilft ein kleineres Beleg-Foto oder das Löschen alter Belege.");
+      return;
+    }
+    toast(s.mode==="add" ? "Einnahme gespeichert" : "Einnahme aktualisiert");
+    sheetState = null; renderOverlayOnly(); render();
+  } else {
+    const d = s.data;
+    d.datum = document.getElementById("f_datum").value;
+    d.belegnummer = document.getElementById("f_belegnummer").value.trim();
+    d.anbieter = document.getElementById("f_anbieter").value.trim();
+    d.beschreibung = document.getElementById("f_beschreibung").value.trim();
+    d.kategorie = document.getElementById("f_kategorie").value;
+    d.betrag = document.getElementById("f_betrag").value;
+    d.zahlungsart = document.getElementById("f_zahlungsart").value;
+    d.notiz = document.getElementById("f_notiz").value.trim();
+    if(d.gemischt){
+      d.anteil = document.getElementById("f_anteil").value;
+      d.begruendung = document.getElementById("f_begruendung").value.trim();
+    } else {
+      d.anteil = 100;
+    }
+    const err = validateExpense(d);
+    if(Object.keys(err).length){ s.errors = err; renderSheet(); return; }
+    d.betrag = Number(d.betrag);
+    d.anteil = Number(d.anteil);
+    let prevSnapshot;
+    if(s.mode==="add"){
+      d.id = uid(); d._created = Date.now();
+      state.ausgaben.push(d);
+    } else {
+      const idx = state.ausgaben.findIndex(x=>x.id===d.id);
+      prevSnapshot = state.ausgaben[idx];
+      state.ausgaben[idx] = d;
+    }
+    if(!saveState()){
+      if(s.mode==="add"){ state.ausgaben.pop(); }
+      else { const idx = state.ausgaben.findIndex(x=>x.id===d.id); state.ausgaben[idx] = prevSnapshot; }
+      toast("Nicht gespeichert — evtl. hilft ein kleineres Beleg-Foto oder das Löschen alter Belege.");
+      return;
+    }
+    toast(s.mode==="add" ? "Ausgabe gespeichert" : "Ausgabe aktualisiert");
+    sheetState = null; renderOverlayOnly(); render();
+  }
+}
+
+/* ============================================================
+   DELETE CONFIRM
+============================================================ */
+function confirmDelete(type, id){
+  const overlay = document.createElement("div");
+  overlay.className = "confirm-backdrop";
+  overlay.innerHTML = `<div class="confirm-box">
+    <h3>Eintrag löschen?</h3>
+    <p>Möchtest du diesen Eintrag wirklich löschen? Dies kann nicht rückgängig gemacht werden.</p>
+    <div class="confirm-actions">
+      <button class="btn btn-secondary btn-block" id="cancelDel">Abbrechen</button>
+      <button class="btn btn-danger btn-block" id="okDel">Löschen</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById("cancelDel").onclick = ()=>overlay.remove();
+  document.getElementById("okDel").onclick = ()=>{
+    if(type==="income") state.einnahmen = state.einnahmen.filter(x=>x.id!==id);
+    else state.ausgaben = state.ausgaben.filter(x=>x.id!==id);
+    saveState();
+    overlay.remove();
+    sheetState = null; renderOverlayOnly();
+    toast("Eintrag gelöscht");
+    render();
+  };
+}
+
+/* ============================================================
+   EXPORT: CSV / EXCEL / PDF / BACKUP
+============================================================ */
+function csvEscape(v){
+  v = String(v==null?"":v);
+  if(/[;"\n]/.test(v)) return '"'+v.replace(/"/g,'""')+'"';
+  return v;
+}
+function downloadBlob(content, filename, mime){
+  const blob = new Blob([content], {type:mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+function exportCsv(){
+  let rows = [["Typ","Datum","Nummer","Kunde/Anbieter","Beschreibung","Kategorie","Gesamtbetrag","Geschäftl. Anteil %","Anrechenbarer Betrag","enthaltene USt","USt-Satz %","Status/Zahlungsart","Notiz"]];
+  state.einnahmen.forEach(e=>{
+    rows.push(["Einnahme", e.datum, e.rechnungsnummer, e.kunde, e.beschreibung, "", e.betrag, "", e.betrag, e.enthaeltUst?e.ustBetrag:"", e.enthaeltUst?e.ustSatz:"", e.zahlungsstatus, e.notiz]);
+  });
+  state.ausgaben.forEach(a=>{
+    rows.push(["Ausgabe", a.datum, a.belegnummer, a.anbieter, a.beschreibung, a.kategorie, a.betrag, a.gemischt?a.anteil:100, anrechenbarerBetrag(a), "", "", a.zahlungsart, a.notiz]);
+  });
+  const csv = "\uFEFF"+rows.map(r=>r.map(csvEscape).join(";")).join("\n");
+  downloadBlob(csv, "Markenmacher_Buchhaltung_"+todayISO()+".csv", "text/csv;charset=utf-8");
+  toast("CSV exportiert");
+}
+function exportBackup(){
+  const json = JSON.stringify(state, null, 2);
+  downloadBlob(json, "Markenmacher_Backup_"+todayISO()+".json", "application/json");
+  toast("Backup erstellt");
+}
+function restoreBackup(file){
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      const parsed = JSON.parse(ev.target.result);
+      if(!parsed || !Array.isArray(parsed.einnahmen) || !Array.isArray(parsed.ausgaben)){
+        toast("Ungültige Backup-Datei"); return;
+      }
+      state = Object.assign(defaultState(), parsed, {
+        settings: Object.assign(defaultState().settings, parsed.settings||{})
+      });
+      saveState();
+      toast("Backup wiederhergestellt");
+      render();
+    }catch(e){
+      toast("Backup konnte nicht gelesen werden");
+    }
+  };
+  reader.readAsText(file);
+}
+function exportPdfReport(){
+  const jahr = ui.euerJahr || String(new Date().getFullYear());
+  const incomes = einnahmenFuerJahr(jahr);
+  const expenses = ausgabenFuerJahr(jahr);
+  const umsatz = sumEinnahmen(incomes), kosten = sumAusgaben(expenses), gewinn = umsatz-kosten;
+  const months = monthNamesDE();
+  let monthRows = "";
+  months.forEach((name,i)=>{
+    const mm = String(i+1).padStart(2,"0");
+    const inc = sumEinnahmen(state.einnahmen.filter(e=>e.datum && e.datum.slice(0,7)===jahr+"-"+mm));
+    const exp = sumAusgaben(state.ausgaben.filter(a=>a.datum && a.datum.slice(0,7)===jahr+"-"+mm));
+    monthRows += `<tr><td>${name}</td><td style="text-align:right">${formatCurrency(inc)}</td><td style="text-align:right">${formatCurrency(exp)}</td><td style="text-align:right">${formatCurrency(inc-exp)}</td></tr>`;
+  });
+  const catTotals = {};
+  expenses.forEach(a=>{ catTotals[a.kategorie||"Sonstiges"] = (catTotals[a.kategorie||"Sonstiges"]||0) + anrechenbarerBetrag(a); });
+  let catRows = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).map(([n,s])=>`<tr><td>${escapeHtml(n)}</td><td style="text-align:right">${formatCurrency(s)}</td></tr>`).join("");
+
+  document.getElementById("printArea").innerHTML = `
+    <h1 style="font-family:Georgia,serif;">Markenmacher Grafikdesign — EÜR ${jahr}</h1>
+    <p>Einnahmen-Überschuss-Rechnung (Betriebseinnahmen − Betriebsausgaben = Gewinn)</p>
+    <table style="width:100%; border-collapse:collapse; margin:14px 0;">
+      <tr><td style="padding:6px 0;">Betriebseinnahmen</td><td style="text-align:right;">${formatCurrency(umsatz)}</td></tr>
+      <tr><td style="padding:6px 0;">Betriebsausgaben</td><td style="text-align:right;">${formatCurrency(kosten)}</td></tr>
+      <tr style="font-weight:bold; border-top:1px solid #000;"><td style="padding:6px 0;">Gewinn</td><td style="text-align:right;">${formatCurrency(gewinn)}</td></tr>
+    </table>
+    <h3>Monatsübersicht</h3>
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+      <tr style="border-bottom:1px solid #000;"><th style="text-align:left;">Monat</th><th style="text-align:right;">Einnahmen</th><th style="text-align:right;">Ausgaben</th><th style="text-align:right;">Gewinn</th></tr>
+      ${monthRows}
+    </table>
+    <h3 style="margin-top:20px;">Ausgaben nach Kategorie</h3>
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+      ${catRows}
+    </table>
+    <p style="margin-top:24px; font-size:11px; color:#555;">Diese Auswertung erfasst ausschließlich die vom Nutzer eingegebenen Daten. Keine Steuerberatung. Erstellt am ${formatDate(todayISO())} mit Markenmacher Buchhaltung.</p>
+  `;
+  window.print();
+}
+
+/* ============================================================
+   EVENT BINDING
+============================================================ */
+function bindGlobalEvents(){
+  document.querySelectorAll("[data-tab]").forEach(el=>{
+    el.addEventListener("click", ()=> setTab(el.getAttribute("data-tab")));
+  });
+  const themeBtn = document.getElementById("themeToggleBtn");
+  if(themeBtn) themeBtn.addEventListener("click", ()=>{
+    const order = ["auto","light","dark"];
+    const idx = order.indexOf(state.settings.theme);
+    state.settings.theme = order[(idx+1)%order.length];
+    saveState(); render();
+  });
+
+  document.querySelectorAll("[data-period]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ui.period = el.getAttribute("data-period"); render(); });
+  });
+  const cf = document.getElementById("customFrom"), ct = document.getElementById("customTo");
+  if(cf) cf.addEventListener("change", ()=>{ ui.customRange.from = cf.value; render(); });
+  if(ct) ct.addEventListener("change", ()=>{ ui.customRange.to = ct.value; render(); });
+
+  document.querySelectorAll("[data-euerjahr]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ui.euerJahr = el.getAttribute("data-euerjahr"); render(); });
+  });
+
+  const searchIncomeInput = document.getElementById("searchIncomeInput");
+  if(searchIncomeInput){
+    searchIncomeInput.addEventListener("input", ()=>{ ui.searchIncome = searchIncomeInput.value; renderListOnly(); });
+  }
+  const searchExpenseInput = document.getElementById("searchExpenseInput");
+  if(searchExpenseInput){
+    searchExpenseInput.addEventListener("input", ()=>{ ui.searchExpense = searchExpenseInput.value; renderListOnly(); });
+  }
+  document.querySelectorAll("[data-fstatus]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ui.filterIncomeStatus = el.getAttribute("data-fstatus"); render(); });
+  });
+  document.querySelectorAll("[data-fcat]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ui.filterExpenseCat = el.getAttribute("data-fcat"); render(); });
+  });
+
+  document.querySelectorAll("[data-open-view]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const type = el.getAttribute("data-open-view")==="income-view" ? "income" : "expense";
+      openViewSheet(type, el.getAttribute("data-id"));
+    });
+  });
+
+  const fab = document.getElementById("fabAdd");
+  if(fab) fab.addEventListener("click", ()=>{
+    const kind = fab.getAttribute("data-open");
+    if(kind==="income-form") openIncomeForm(null);
+    else if(kind==="expense-form") openExpenseForm(null);
+    else if(kind==="quick-add") openQuickAdd();
+  });
+
+  // Settings page bindings
+  bindSettingsEvents();
+
+  // Export buttons on EÜR page
+  const exCsv = document.getElementById("exportCsvBtn"); if(exCsv) exCsv.addEventListener("click", exportCsv);
+  const exExcel = document.getElementById("exportExcelBtn"); if(exExcel) exExcel.addEventListener("click", exportCsv);
+  const exPdf = document.getElementById("exportPdfBtn"); if(exPdf) exPdf.addEventListener("click", exportPdfReport);
+}
+
+function renderListOnly(){
+  // lightweight re-render of just the page content to keep search input focus reasonable
+  const pageEl = document.querySelector(".page");
+  if(pageEl){
+    const scrollY = window.scrollY;
+    pageEl.innerHTML = renderPage();
+    bindGlobalEvents();
+    const inp = document.getElementById(ui.tab==="einnahmen" ? "searchIncomeInput" : "searchExpenseInput");
+    if(inp){ inp.focus(); const len = inp.value.length; inp.setSelectionRange(len, len); }
+    window.scrollTo(0, scrollY);
+  }
+}
+
+function bindSettingsEvents(){
+  const nameInput = document.getElementById("companyNameInput");
+  if(nameInput) nameInput.addEventListener("change", ()=>{ state.settings.companyName = nameInput.value.trim() || "Markenmacher Grafikdesign"; saveState(); toast("Gespeichert"); });
+
+  const kuSwitch = document.getElementById("kuSwitch");
+  if(kuSwitch) kuSwitch.addEventListener("click", ()=>{ state.settings.kleinunternehmer = !state.settings.kleinunternehmer; saveState(); render(); });
+
+  const ustStdInput = document.getElementById("ustSatzStandardInput");
+  if(ustStdInput) ustStdInput.addEventListener("change", ()=>{
+    const v = Math.max(0, Math.min(100, Number(ustStdInput.value)||0));
+    state.settings.ustSatzStandard = v; saveState(); toast("Gespeichert");
+  });
+
+  document.querySelectorAll("[data-theme-choice]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.settings.theme = el.getAttribute("data-theme-choice"); saveState(); render(); });
+  });
+
+  const pinSwitch = document.getElementById("pinSwitch");
+  if(pinSwitch) pinSwitch.addEventListener("click", ()=>{
+    if(state.settings.pin){
+      state.settings.pin = null; saveState(); render(); toast("App-Sperre deaktiviert");
+    } else {
+      openSetPinFlow();
+    }
+  });
+
+  const addCatBtn = document.getElementById("addCatBtn");
+  if(addCatBtn) addCatBtn.addEventListener("click", ()=>{
+    const inp = document.getElementById("newCatInput");
+    const v = inp.value.trim();
+    if(v && !state.categories.includes(v)){ state.categories.push(v); saveState(); render(); }
+  });
+  document.querySelectorAll("[data-cat-index]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      const i = Number(el.getAttribute("data-cat-index"));
+      const old = state.categories[i];
+      const val = el.value.trim();
+      if(val){
+        state.categories[i] = val;
+        state.ausgaben.forEach(a=>{ if(a.kategorie===old) a.kategorie = val; });
+        saveState();
+      }
+    });
+  });
+  document.querySelectorAll("[data-del-cat]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const i = Number(el.getAttribute("data-del-cat"));
+      state.categories.splice(i,1);
+      saveState(); render();
+    });
+  });
+
+  const expCsv = document.getElementById("settingsExportCsv"); if(expCsv) expCsv.addEventListener("click", exportCsv);
+  const backupBtn = document.getElementById("settingsBackup"); if(backupBtn) backupBtn.addEventListener("click", exportBackup);
+  const restoreBtn = document.getElementById("settingsRestore");
+  const restoreInput = document.getElementById("restoreFileInput");
+  if(restoreBtn) restoreBtn.addEventListener("click", ()=> restoreInput.click());
+  if(restoreInput) restoreInput.addEventListener("change", ()=>{ if(restoreInput.files[0]) restoreBackup(restoreInput.files[0]); });
+
+  const resetBtn = document.getElementById("resetAllBtn");
+  if(resetBtn) resetBtn.addEventListener("click", ()=>{
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-backdrop";
+    overlay.innerHTML = `<div class="confirm-box">
+      <h3>Alle Daten löschen?</h3>
+      <p>Alle Einnahmen, Ausgaben und Einstellungen werden unwiderruflich gelöscht. Erstelle vorher ggf. ein Backup.</p>
+      <div class="confirm-actions">
+        <button class="btn btn-secondary btn-block" id="cancelReset">Abbrechen</button>
+        <button class="btn btn-danger btn-block" id="okReset">Löschen</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById("cancelReset").onclick = ()=>overlay.remove();
+    document.getElementById("okReset").onclick = ()=>{
+      state = defaultState(); saveState(); overlay.remove(); render(); toast("Alle Daten gelöscht");
+    };
+  });
+}
+
+function openSetPinFlow(){
+  let step = 1, first = "";
+  const overlay = document.createElement("div");
+  overlay.className = "confirm-backdrop";
+  function draw(msg, buf){
+    overlay.innerHTML = `<div class="confirm-box" style="text-align:center;">
+      <h3>${msg}</h3>
+      <div class="pin-dots" style="justify-content:center; margin:16px 0;">${[0,1,2,3].map(i=>`<div class="pin-dot ${i<buf.length?'filled':''}"></div>`).join("")}</div>
+      <div class="pin-pad" style="margin:0 auto;">
+        ${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-spin="${n}">${n}</button>`).join("")}
+        <div></div><button data-spin="0">0</button><button data-spin="back">⌫</button>
+      </div>
+      <button class="btn btn-secondary btn-block" id="cancelSetPin" style="margin-top:14px;">Abbrechen</button>
+    </div>`;
+    overlay.querySelectorAll("[data-spin]").forEach(b=>b.addEventListener("click", ()=>onKey(b.getAttribute("data-spin"))));
+    document.getElementById("cancelSetPin").onclick = ()=>overlay.remove();
+  }
+  let buffer = "";
+  function onKey(v){
+    if(v==="back"){ buffer = buffer.slice(0,-1); draw(step===1?"Neuen Code eingeben":"Code bestätigen", buffer); return; }
+    if(buffer.length<4) buffer += v;
+    if(buffer.length===4){
+      if(step===1){ first = buffer; buffer=""; step=2; draw("Code bestätigen", buffer); }
+      else {
+        if(buffer===first){
+          state.settings.pin = buffer; saveState(); overlay.remove(); render(); toast("App-Sperre aktiviert");
+        } else {
+          toast("Codes stimmen nicht überein"); buffer=""; step=1; draw("Neuen Code eingeben", buffer);
+        }
+      }
+    } else {
+      draw(step===1?"Neuen Code eingeben":"Code bestätigen", buffer);
+    }
+  }
+  document.body.appendChild(overlay);
+  draw("Neuen Code eingeben", buffer);
+}
+
+function bindSheetEvents(){
+  const overlay = document.getElementById("sheetOverlay");
+  if(!overlay) return;
+  overlay.addEventListener("click", (e)=>{ if(e.target.id==="sheetOverlay"){ sheetState=null; overlay.remove(); } });
+  const closeBtn = document.getElementById("sheetCloseBtn");
+  if(closeBtn) closeBtn.addEventListener("click", ()=>{ sheetState=null; overlay.remove(); });
+
+  if(sheetState && sheetState.viewMode){
+    const editBtn = document.getElementById("sheetEditBtn");
+    if(editBtn) editBtn.addEventListener("click", ()=>{
+      const type = sheetState.type, data = sheetState.data;
+      if(type==="income") openIncomeForm(data); else openExpenseForm(data);
+    });
+    const delBtn = document.getElementById("sheetDeleteBtn");
+    if(delBtn) delBtn.addEventListener("click", ()=> confirmDelete(sheetState.type, sheetState.data.id));
+    return;
+  }
+
+  // form mode
+  const saveBtn = document.getElementById("sheetSaveBtn");
+  if(saveBtn) saveBtn.addEventListener("click", saveSheet);
+  const delBtn2 = document.getElementById("sheetDeleteBtn");
+  if(delBtn2) delBtn2.addEventListener("click", ()=> confirmDelete(sheetState.type, sheetState.data.id));
+
+  document.querySelectorAll("[data-seg]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const key = btn.getAttribute("data-seg"), val = btn.getAttribute("data-val");
+      sheetState.data[key] = val;
+      renderSheet();
+    });
+  });
+
+  const mixedSwitch = document.getElementById("mixedSwitch");
+  if(mixedSwitch) mixedSwitch.addEventListener("click", ()=>{
+    sheetState.data.gemischt = !sheetState.data.gemischt;
+    if(sheetState.data.gemischt && !sheetState.data.anteil) sheetState.data.anteil = 100;
+    renderSheet();
+  });
+
+  const ustSwitch = document.getElementById("ustSwitch");
+  if(ustSwitch) ustSwitch.addEventListener("click", ()=>{
+    sheetState.data.enthaeltUst = !sheetState.data.enthaeltUst;
+    renderSheet();
+  });
+
+  ["f_betrag","f_anteil","f_ustSatz"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener("input", ()=>{
+      if(document.getElementById("f_betrag")) sheetState.data.betrag = document.getElementById("f_betrag").value;
+      if(document.getElementById("f_anteil")) sheetState.data.anteil = document.getElementById("f_anteil").value;
+      if(document.getElementById("f_ustSatz")) sheetState.data.ustSatz = document.getElementById("f_ustSatz").value;
+      updateMixCalcLive();
+      updateUstCalcLive();
+    });
+  });
+
+  const camInput = document.getElementById("receiptCameraInput");
+  if(camInput) camInput.addEventListener("change", ()=>{ if(camInput.files[0]) handleReceiptFile(camInput.files[0]); });
+  const fileInput = document.getElementById("receiptFileInput");
+  if(fileInput) fileInput.addEventListener("change", ()=>{ if(fileInput.files[0]) handleReceiptFile(fileInput.files[0]); });
+  const removeBtn = document.getElementById("removeReceiptBtn");
+  if(removeBtn) removeBtn.addEventListener("click", ()=>{ sheetState.data.beleg = null; renderSheet(); });
+}
+
+function updateUstCalcLive(){
+  const nettoEl = document.getElementById("ustNetto"), betragEl = document.getElementById("ustBetragEl"), bruttoEl = document.getElementById("ustBrutto");
+  if(!nettoEl) return;
+  const brutto = Number(document.getElementById("f_betrag").value)||0;
+  const satz = Math.max(0, Number(document.getElementById("f_ustSatz") ? document.getElementById("f_ustSatz").value : 0)||0);
+  const ust = round2(brutto - brutto/(1+satz/100));
+  const netto = round2(brutto - ust);
+  nettoEl.textContent = formatCurrency(netto);
+  betragEl.textContent = formatCurrency(ust);
+  bruttoEl.textContent = formatCurrency(brutto);
+}
+
+function updateMixCalcLive(){
+  const totalEl = document.getElementById("mixTotal"), pctEl = document.getElementById("mixPct"), resEl = document.getElementById("mixResult");
+  if(!totalEl) return;
+  const gesamt = Number(document.getElementById("f_betrag").value)||0;
+  const anteil = Math.max(0,Math.min(100, Number(document.getElementById("f_anteil") ? document.getElementById("f_anteil").value : 100)||0));
+  totalEl.textContent = formatCurrency(gesamt);
+  pctEl.textContent = anteil+"%";
+  resEl.textContent = formatCurrency(Math.round(gesamt*anteil)/100);
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+if(window.matchMedia){
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", ()=>{ if(state.settings.theme==="auto") applyTheme(); });
+}
+render();
+
+})();
+</script>
+</body>
+</html>
